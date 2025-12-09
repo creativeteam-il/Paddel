@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - padel_league_manager_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=padel_league_manager
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://user:password@db/padel_league_manager
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  padel_league_manager_data:
