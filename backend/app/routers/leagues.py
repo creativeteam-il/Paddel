@@ -3,6 +3,8 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models import League, User, UserRole
 from app.schemas import LeagueCreate, LeagueRead, InviteLinkResponse, UserRead, JoinLeagueRequest
+from app.services.leaderboard import calculate_leaderboard, PlayerStats
+from typing import List
 import uuid
 
 router = APIRouter()
@@ -74,3 +76,8 @@ def join_league(request: JoinLeagueRequest, db: Session = Depends(get_session), 
     db.refresh(current_user)
 
     return current_user
+
+@router.get("/leagues/{league_id}/leaderboard", response_model=List[PlayerStats])
+def get_leaderboard(league_id: uuid.UUID, session: Session = Depends(get_session)):
+    leaderboard = calculate_leaderboard(league_id, session)
+    return leaderboard
