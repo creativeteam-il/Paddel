@@ -42,3 +42,38 @@ class InviteLinkResponse(BaseModel):
 
 class JoinLeagueRequest(BaseModel):
     invite_code: str
+
+
+class ScoreInput(BaseModel):
+    set_1_home: int
+    set_1_away: int
+    set_2_home: int
+    set_2_away: int
+    set_3_home: int | None = None
+    set_3_away: int | None = None
+
+class MatchCreate(BaseModel):
+    league_id: uuid.UUID
+    team_a_players: list[uuid.UUID]
+    team_b_players: list[uuid.UUID]
+    scores: ScoreInput
+
+    @root_validator
+    def check_players(cls, values):
+        team_a = values.get('team_a_players')
+        team_b = values.get('team_b_players')
+
+        if not team_a or not team_b:
+            # Let other validators handle this
+            return values
+
+        if len(team_a) != 2 or len(set(team_a)) != 2:
+            raise ValueError("Team A must have exactly 2 unique players")
+
+        if len(team_b) != 2 or len(set(team_b)) != 2:
+            raise ValueError("Team B must have exactly 2 unique players")
+
+        if len(set(team_a + team_b)) != 4:
+            raise ValueError("All 4 players must be distinct")
+
+        return values
