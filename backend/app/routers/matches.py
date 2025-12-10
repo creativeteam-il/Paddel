@@ -2,7 +2,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import Session, select
 
-from app.database import get_db
+from app.database import get_session, engine
 from app.models import Match, MatchParticipant, Score, User, MatchStatus
 from app.schemas import MatchCreate
 from app.services.ai import generate_match_summary
@@ -31,7 +31,7 @@ def get_player_names(db: Session, player_ids: list[uuid.UUID]) -> dict[uuid.UUID
 
 
 # Placeholder for user authentication
-def get_current_user(db: Session = Depends(get_db)) -> User:
+def get_current_user(db: Session = Depends(get_session)) -> User:
     """
     Placeholder dependency to simulate fetching the authenticated user.
     In a real application, this would be replaced with your actual authentication logic
@@ -48,10 +48,7 @@ async def update_match_summary(match_id: uuid.UUID):
     Background task to generate and save the AI match summary.
     """
     # Create a new database session for the background task
-    from app.database import SessionLocal
-    db = SessionLocal()
-
-    try:
+    with Session(engine) as db:
         match = db.get(Match, match_id)
         if not match:
             return
@@ -75,15 +72,13 @@ async def update_match_summary(match_id: uuid.UUID):
         match.summary_text = summary
         db.add(match)
         db.commit()
-    finally:
-        db.close()
 
 
 @router.post("/matches/", status_code=201)
 async def create_match(
     match_data: MatchCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """

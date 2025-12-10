@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl, root_validator
+from pydantic import BaseModel, HttpUrl, model_validator
 import uuid
 
 class LeagueCreate(BaseModel):
@@ -19,14 +19,15 @@ class LeagueRead(BaseModel):
     class Config:
         orm_mode = True
 
-    @root_validator(pre=True)
-    def build_settings(cls, values):
-        if 'settings' not in values:
-            win_points = values.get('points_for_win')
-            loss_points = values.get('points_for_loss')
+    @model_validator(mode='before')
+    @classmethod
+    def build_settings(cls, data):
+        if isinstance(data, dict) and 'settings' not in data:
+            win_points = data.get('points_for_win')
+            loss_points = data.get('points_for_loss')
             if win_points is not None and loss_points is not None:
-                values['settings'] = LeagueSettings(points_for_win=win_points, points_for_loss=loss_points)
-        return values
+                data['settings'] = {'points_for_win': win_points, 'points_for_loss': loss_points}
+        return data
 
 class UserRead(BaseModel):
     id: uuid.UUID
@@ -58,14 +59,13 @@ class MatchCreate(BaseModel):
     team_b_players: list[uuid.UUID]
     scores: ScoreInput
 
-    @root_validator
-    def check_players(cls, values):
-        team_a = values.get('team_a_players')
-        team_b = values.get('team_b_players')
+    @model_validator(mode='after')
+    def check_players(self):
+        team_a = self.team_a_players
+        team_b = self.team_b_players
 
         if not team_a or not team_b:
-            # Let other validators handle this
-            return values
+            return self
 
         if len(team_a) != 2 or len(set(team_a)) != 2:
             raise ValueError("Team A must have exactly 2 unique players")
@@ -76,4 +76,4 @@ class MatchCreate(BaseModel):
         if len(set(team_a + team_b)) != 4:
             raise ValueError("All 4 players must be distinct")
 
-        return values
+        return self
