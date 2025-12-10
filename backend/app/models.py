@@ -47,6 +47,8 @@ class Match(SQLModel, table=True):
     status: MatchStatus
     submitted_by: uuid.UUID = Field(foreign_key="user.id")
 
+    summary_text: Optional[str] = None
+
     league: League = Relationship(back_populates="matches")
     submitter: User = Relationship()
     participants: List["MatchParticipant"] = Relationship(back_populates="match")
